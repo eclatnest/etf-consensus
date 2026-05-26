@@ -18,7 +18,7 @@
     ],
     "memory_enabled": false,
     "git_config": {
-      "repo": "YOUR_GITHUB_USER/etf-consensus",
+      "repo": "eclatnest/etf-consensus",
       "branch": "master"
     }
   },
