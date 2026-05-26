@@ -7,7 +7,10 @@
 ```bash
 pip install akshare pandas matplotlib -q
 python run_etf_nightly_update.py
+python scripts/publish_daily_to_github.py --push
 ```
+
+第二步会把 `published/daily/NEXT_OPEN.md`（次日开盘操作）提交并 push 到 GitHub。
 
 ## 输出目录
 
@@ -17,6 +20,7 @@ python run_etf_nightly_update.py
 | `mx_data_output/etf_daily/nightly/portfolio_*/` | 当次组合回测（带时间戳） |
 | `mx_data_output/etf_daily/latest_portfolio/` | **最新**组合 CSV + `pnl_chart.png` |
 | `mx_data_output/etf_daily/nightly/last_run.txt` | 上次成功时间 |
+| **`published/daily/NEXT_OPEN.md`** | **推 GitHub：第二天开盘操作（主看此文件）** |
 
 ## 组合策略（固定）
 
@@ -28,4 +32,5 @@ python run_etf_nightly_update.py
 
 - akshare 崩溃：`python run_etf_daily_signals.py --workers 4 --sequential`
 - 无 `detail_cache_1260d.pkl`：首次会较慢（约 40 分钟），之后读缓存约 1–2 分钟
-- 完成后用中文简要汇报：行情截止日、组合净值/年化、买入卖出只数、`latest_portfolio` 路径
+- 完成后用中文简要汇报：行情截止日、组合净值/年化、次日开盘买入/卖出只数、`published/daily/NEXT_OPEN.md` 是否已 push
+- `git push` 失败时说明原因（凭据/权限），仍汇报本地已生成的 Markdown 路径

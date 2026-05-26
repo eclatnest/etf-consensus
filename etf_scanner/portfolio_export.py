@@ -175,6 +175,20 @@ def add_consensus_open_action_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def attach_portfolio_equity(all_etf: pd.DataFrame, pnl: pd.DataFrame) -> pd.DataFrame:
+    """按交易日合并组合总资产 equity（与 pnl_daily.csv 一致，为当日收盘后权益）。"""
+    if all_etf.empty or pnl.empty or "equity" not in pnl.columns:
+        return all_etf
+    out = all_etf.copy()
+    eq = pnl[["date", "equity"]].copy()
+    eq["date"] = pd.to_datetime(eq["date"]).dt.normalize()
+    out["date"] = pd.to_datetime(out["date"]).dt.normalize()
+    out = out.drop(columns=["equity"], errors="ignore")
+    out = out.merge(eq, on="date", how="left")
+    out["equity"] = out["equity"].round(2)
+    return out
+
+
 def _reorder_etf_pnl_columns(df: pd.DataFrame) -> pd.DataFrame:
     front = [
         "date",
@@ -184,6 +198,7 @@ def _reorder_etf_pnl_columns(df: pd.DataFrame) -> pd.DataFrame:
         "next_open_action",
         "next_open_brief",
         "today_close_action",
+        "equity",
         "weight",
         "etf_ret",
         "etf_ret_pct",
@@ -409,10 +424,13 @@ def write_portfolio_exports(
 
     all_etf, sum_etf = build_per_etf_pnl(etf_records, trades, init_cash)
     if not all_etf.empty:
+        all_etf = attach_portfolio_equity(all_etf, pnl)
         all_etf = mark_etf_actions(all_etf, trades)
         if detail is not None and rules is not None:
             br = bench_regime if bench_regime is not None else pd.DataFrame()
             all_etf = enrich_pnl_by_etf_next_action(all_etf, detail, rules, br)
+            all_etf = attach_portfolio_equity(all_etf, pnl)
+        all_etf = _reorder_etf_pnl_columns(all_etf)
         all_etf.to_csv(out_dir / "pnl_by_etf_all.csv", index=False, encoding="utf-8-sig")
     if not sum_etf.empty:
         sum_etf.to_csv(out_dir / "pnl_by_etf_summary.csv", index=False, encoding="utf-8-sig")
@@ -425,9 +443,12 @@ def write_portfolio_exports(
             continue
         df = pd.DataFrame(recs).sort_values("date")
         df = mark_etf_actions(df, trades[trades["code"].astype(str).str.zfill(6) == zcode(code)])
+        df = attach_portfolio_equity(df, pnl)
         if detail is not None and rules is not None:
             br = bench_regime if bench_regime is not None else pd.DataFrame()
             df = enrich_pnl_by_etf_next_action(df, detail, rules, br)
+            df = attach_portfolio_equity(df, pnl)
+        df = _reorder_etf_pnl_columns(df)
         name = df["name"].iloc[0] if "name" in df.columns else code
         safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in name)[:20]
         df.to_csv(etf_dir / f"{zcode(code)}_{safe}.csv", index=False, encoding="utf-8-sig")

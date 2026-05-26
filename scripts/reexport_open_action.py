@@ -14,8 +14,22 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from etf_scanner.consensus_backtest import load_benchmark_regime, history_tail_bars
-from etf_scanner.portfolio_export import enrich_pnl_by_etf_next_action, mark_etf_actions
+from etf_scanner.portfolio_export import (
+    attach_portfolio_equity,
+    enrich_pnl_by_etf_next_action,
+    mark_etf_actions,
+    _reorder_etf_pnl_columns,
+)
 from etf_scanner.portfolio_rules import PROFILE_5Y_N5_MOM25
+
+
+def _read_csv(path: Path) -> pd.DataFrame:
+    for enc in ("utf-8-sig", "utf-8", "gb18030", "gbk"):
+        try:
+            return pd.read_csv(path, encoding=enc)
+        except UnicodeDecodeError:
+            continue
+    return pd.read_csv(path)
 
 
 def main() -> None:
@@ -29,20 +43,27 @@ def main() -> None:
 
     out = Path(args.dir)
     all_path = out / "pnl_by_etf_all.csv"
+    pnl_path = out / "pnl_daily.csv"
     trades_path = out / "trades_marked.csv"
     if not all_path.is_file():
         raise FileNotFoundError(all_path)
+    if not pnl_path.is_file():
+        raise FileNotFoundError(pnl_path)
 
     cache = ROOT / "mx_data_output" / "etf_daily" / f"detail_cache_{args.days}d.pkl"
     if not cache.is_file():
         raise FileNotFoundError(f"缺少 {cache}")
 
     detail = pickle.loads(cache.read_bytes())
-    all_etf = pd.read_csv(all_path, encoding="utf-8-sig")
-    trades = pd.read_csv(trades_path, encoding="utf-8-sig") if trades_path.is_file() else pd.DataFrame()
+    all_etf = _read_csv(all_path)
+    pnl = _read_csv(pnl_path)
+    trades = _read_csv(trades_path) if trades_path.is_file() else pd.DataFrame()
+    all_etf = attach_portfolio_equity(all_etf, pnl)
     all_etf = mark_etf_actions(all_etf, trades)
     bench = load_benchmark_regime(history_tail_bars(args.days))
     all_etf = enrich_pnl_by_etf_next_action(all_etf, detail, PROFILE_5Y_N5_MOM25, bench)
+    all_etf = attach_portfolio_equity(all_etf, pnl)
+    all_etf = _reorder_etf_pnl_columns(all_etf)
     all_etf.to_csv(all_path, index=False, encoding="utf-8-sig")
     print(f"已更新 {all_path}")
     print(all_etf[["date", "code", "next_open_action", "next_open_brief"]].tail(8).to_string(index=False))

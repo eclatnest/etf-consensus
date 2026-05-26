@@ -60,9 +60,17 @@ def main() -> None:
         f"ok {datetime.now().isoformat()}\nportfolio={port_dir.name}\n",
         encoding="utf-8",
     )
+
+    from etf_scanner.publish_github import publish_daily
+
+    pub = publish_daily(LATEST_LINK, ROOT / "mx_data_output" / "etf_daily" / "latest", push=False)
+    print(f"\nGitHub 摘要: {pub['next_open_md']}")
+
     print(f"\n完成。组合 CSV/图: {port_dir.resolve()}")
     print(f"最新副本: {LATEST_LINK.resolve()}")
     print(f"信号 CSV: {(ROOT / 'mx_data_output' / 'etf_daily' / 'latest').resolve()}")
+    print(f"次日操作 Markdown: {pub['next_open_md'].resolve()}")
+    print("推送到 GitHub: python scripts/publish_daily_to_github.py --push")
 
 
 if __name__ == "__main__":

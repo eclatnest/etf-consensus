@@ -13,7 +13,7 @@
     ],
     "prompts": [
       {
-        "prompt": "请阅读 .cursor/automations/etf-nightly-data.prompt.md，在仓库根目录执行 python run_etf_nightly_update.py，完成后用中文汇报：行情截止日、latest/ 与 latest_portfolio/ 下关键 CSV 是否更新、组合期末净值与年化（从 portfolio_summary.csv）。不要改代码、不要开 PR。"
+        "prompt": "请阅读 .cursor/automations/etf-nightly-data.prompt.md，在仓库根目录依次执行：python run_etf_nightly_update.py ；python scripts/publish_daily_to_github.py --push 。完成后用中文汇报：信号日、次日开盘买入/卖出/持有只数（见 published/daily/NEXT_OPEN.md）、GitHub push 是否成功、组合净值与年化。不要改策略代码、不要开 PR。"
       }
     ],
     "memory_enabled": false

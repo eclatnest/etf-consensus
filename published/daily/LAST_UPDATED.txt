@@ -1,0 +1,4 @@
+signal_date=2026-05-26
+generated_at=2026-05-27T07:02:21.556584
+equity=226596.66
+source_portfolio=backtest_10pos_5y_20260526_2159
