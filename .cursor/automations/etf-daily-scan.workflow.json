@@ -1,0 +1,30 @@
+{
+  "name": "ETF每日买卖扫描",
+  "description": "每个交易日收盘后扫描全市场ETF，输出共识买入/卖出清单",
+  "automationId": "ba255fb3-3df6-47db-a6a4-b36a363f8678",
+  "url": "https://cursor.com/automations/ba255fb3-3df6-47db-a6a4-b36a363f8678",
+  "workflow": {
+    "triggers": [
+      {
+        "cron": {
+          "cron": "0 9 * * 1-5"
+        }
+      }
+    ],
+    "prompts": [
+      {
+        "prompt": "请阅读仓库 .cursor/automations/etf-daily-scan.prompt.md 并按其中步骤执行：运行 python run_etf_daily_signals.py --workers 4，读取 mx_data_output/etf_daily/latest/ 下的 CSV，用中文输出买入/卖出/持有摘要。不要改代码、不要开 PR。"
+      }
+    ],
+    "memory_enabled": false,
+    "git_config": {
+      "repo": "YOUR_GITHUB_USER/YOUR_REPO",
+      "branch": "main"
+    }
+  },
+  "notes": {
+    "schedule": "cron 0 9 * * 1-5 = UTC 09:00 ≈ 北京 17:00（工作日）",
+    "git_config": "在 cursor.com 自动化设置里绑定含本项目的 GitHub 仓库；git_config 仅作备忘",
+    "local": "本机备用：run_etf_daily.bat + 任务计划程序"
+  }
+}

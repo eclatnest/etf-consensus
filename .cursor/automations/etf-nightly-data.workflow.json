@@ -1,0 +1,26 @@
+{
+  "name": "ETF每晚数据更新",
+  "description": "每天22:15(北京)更新信号CSV、5年组合回测CSV与PnL图",
+  "automationId": "7f60a95d-6dc4-44f2-9947-15c756711798",
+  "url": "https://cursor.com/automations/7f60a95d-6dc4-44f2-9947-15c756711798",
+  "workflow": {
+    "triggers": [
+      {
+        "cron": {
+          "cron": "15 14 * * 1-5"
+        }
+      }
+    ],
+    "prompts": [
+      {
+        "prompt": "请阅读 .cursor/automations/etf-nightly-data.prompt.md，在仓库根目录执行 python run_etf_nightly_update.py，完成后用中文汇报：行情截止日、latest/ 与 latest_portfolio/ 下关键 CSV 是否更新、组合期末净值与年化（从 portfolio_summary.csv）。不要改代码、不要开 PR。"
+      }
+    ],
+    "memory_enabled": false
+  },
+  "notes": {
+    "schedule": "cron 15 14 * * 1-5 = UTC 14:15 ≈ 北京 22:15（工作日）",
+    "strategy": "enhanced5y_n5: fill_vote3 + MA200 + mom25% + max 5",
+    "local_windows": "run_etf_nightly.bat 或任务计划程序 22:15"
+  }
+}

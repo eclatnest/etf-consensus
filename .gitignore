@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+.env
+.env.*
+
+# 回测缓存与输出（Automation 运行时会重新生成）
+mx_data_output/
+*.pkl
+
+# Cursor 本地（保留 .cursor/automations）
+terminals/
+agent-transcripts/
+mcps/
+.cursor/projects/
+
+# 图片与日志
+*.png
+*.log
+
+# 无关子项目（非 ETF 自动化）
+designer-portfolio/
+fight-duel/
+retro-pixel-snake/
+canvases/
+brain_alphas/
+assets/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
