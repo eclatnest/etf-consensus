@@ -32,5 +32,15 @@ python scripts/publish_daily_to_github.py --push
 
 - akshare 崩溃：`python run_etf_daily_signals.py --workers 4 --sequential`
 - 无 `detail_cache_1260d.pkl`：首次会较慢（约 40 分钟），之后读缓存约 1–2 分钟
-- 完成后用中文简要汇报：行情截止日、组合净值/年化、次日开盘买入/卖出只数、`published/daily/NEXT_OPEN.md` 是否已 push
-- `git push` 失败时说明原因（凭据/权限），仍汇报本地已生成的 Markdown 路径
+
+## 完成汇报（Automation 用中文输出）
+
+1. **行情截止日**
+2. **`latest/` 与 `latest_portfolio/`** 下关键 CSV 是否已更新（如 `signals_all.csv`、`pnl_daily.csv`、`pnl_by_etf_all.csv`、`portfolio_summary.csv`）
+3. **组合期末净值与年化**（来自 `latest_portfolio/portfolio_summary.csv`）
+4. **第二天开盘操作**（执行 `python scripts/publish_daily_to_github.py --push` 后，读 `published/daily/NEXT_OPEN.md` 或 `next_open_actions.csv`）：
+   - 执行日（开盘日期）
+   - **开盘买入**：只数 + 代码/名称
+   - **开盘卖出**：只数 + 代码/名称
+   - **开盘持有**：只数 + 代码/名称
+   - GitHub 是否 push 成功（`published/daily/` 可在仓库网页查看）
