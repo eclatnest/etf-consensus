@@ -27,3 +27,17 @@ python run_etf_nightly_update.py
 - `plot_etf_portfolio_pnl.py` — 净值/回撤图
 
 输出目录（运行后生成）：`mx_data_output/etf_daily/latest/`、`latest_portfolio/`。
+
+## 推送到 GitHub（Automation 必需）
+
+本机已 `git init` 并提交代码。首次推送：
+
+```powershell
+# 1. 登录 GitHub（浏览器）
+gh auth login -h github.com -p https -w
+
+# 2. 创建仓库并推送（默认名 etf-consensus）
+powershell scripts/push_to_github.ps1
+```
+
+然后在 [Cursor Automations](https://cursor.com/automations) 里把两个自动化绑定到该仓库。

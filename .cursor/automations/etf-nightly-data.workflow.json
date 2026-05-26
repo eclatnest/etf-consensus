@@ -21,6 +21,7 @@
   "notes": {
     "schedule": "cron 15 14 * * 1-5 = UTC 14:15 ≈ 北京 22:15（工作日）",
     "strategy": "enhanced5y_n5: fill_vote3 + MA200 + mom25% + max 5",
+    "git_repo": "绑定 GitHub 仓库 YOUR_GITHUB_USER/etf-consensus（见 scripts/push_to_github.ps1）",
     "local_windows": "run_etf_nightly.bat 或任务计划程序 22:15"
   }
 }
