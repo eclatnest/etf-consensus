@@ -205,9 +205,12 @@ def scan_daily_signals(
 
 
 def build_report(df: pd.DataFrame, out_dir: Path) -> dict[str, pd.DataFrame]:
+    from etf_scanner.portfolio_export import add_consensus_open_action_columns
+
     out_dir.mkdir(parents=True, exist_ok=True)
     trade_date = df["date"].iloc[0] if not df.empty else datetime.now().strftime("%Y-%m-%d")
 
+    df = add_consensus_open_action_columns(df)
     buy = df[df["consensus"] == "买入"].sort_values(["vote_hold", "code"], ascending=[False, True])
     sell = df[df["consensus"] == "卖出"].sort_values("code")
     hold = df[df["consensus"] == "持有"].sort_values("vote_hold", ascending=False)

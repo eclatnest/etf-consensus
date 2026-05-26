@@ -64,21 +64,22 @@ def enrich_pnl_daily(pnl: pd.DataFrame, daily_weights: list[dict[str, float]], n
     return pd.DataFrame(rows)
 
 
-def _consensus_next_action(consensus: str) -> str:
-    """收盘共识标签 -> 次日开盘应执行的操作。"""
-    c = str(consensus or "").strip()
-    if c in ("买入", "卖出", "持有", "观望", "空仓"):
-        return c
-    return "观望"
+_OPEN_FROM_CONSENSUS = {
+    "买入": "开盘买入",
+    "卖出": "开盘卖出",
+    "持有": "开盘持有",
+    "观望": "观望不动",
+    "空仓": "空仓不动",
+}
 
 
-def _portfolio_next_action(
+def _portfolio_signal_flag(
     sig: pd.Series | None,
     rules: PortfolioRules,
     risk_on: bool,
     is_held: bool,
 ) -> str:
-    """组合规则下，收盘后对该标的的次日操作建议。"""
+    """内部：组合规则判断 卖出/持有/可买入/观望/不可买。"""
     if not is_held:
         if not risk_on and rules.regime_mode in ("no_buy", "force_cash"):
             return "不可买"
@@ -105,6 +106,95 @@ def _portfolio_next_action(
     return "持有"
 
 
+def resolve_next_open_action(
+    *,
+    held: bool,
+    today_close_action: str,
+    port_flag: str,
+    risk_on: bool,
+    consensus: str,
+    vote: int,
+    mom: float | None,
+    next_date: pd.Timestamp | None,
+) -> tuple[str, str]:
+    """
+    返回 (next_open_action, next_open_brief)。
+    约定：收盘算信号 → 次日开盘执行（与回测一致）。
+    """
+    nd = ""
+    if next_date is not None and pd.notna(next_date):
+        nd = pd.Timestamp(next_date).strftime("%Y-%m-%d")
+
+    tc = str(today_close_action or "持有").strip()
+    cons = str(consensus or "").strip()
+
+    # 今日收盘已下卖单
+    if tc == "卖出":
+        brief = f"{nd} 开盘卖出" if nd else "开盘卖出"
+        return "开盘卖出", f"{brief}（今日收盘已发卖单，次日开盘清仓）"
+
+    # 今日收盘买入 → 次日开盘起持仓
+    if tc == "买入":
+        if port_flag == "卖出":
+            brief = f"{nd} 开盘卖出" if nd else "开盘卖出"
+            return "开盘卖出", f"{brief}（今日新开仓，但组合规则要求次日卖出）"
+        brief = f"{nd} 开盘持有" if nd else "开盘持有"
+        return "开盘持有", f"{brief}（今日收盘买入，次日开盘起算持仓）"
+
+    if not held:
+        if port_flag == "不可买" or not risk_on:
+            return "大盘弱·不开仓", f"{nd or '次日'} 不买入（沪深300未站上MA200）"
+        if port_flag == "可买入":
+            mom_s = f"动量{mom}%" if mom is not None else "动量—"
+            return "开盘买入", f"{nd or '次日'} 开盘买入（三票{vote}+ {mom_s}，满足组合条件）"
+        if port_flag == "过滤":
+            return "观望不动", f"{nd or '次日'} 不操作（货币/理财类过滤）"
+        open_a = _OPEN_FROM_CONSENSUS.get(cons, "观望不动")
+        return open_a, f"{nd or '次日'} {open_a}（共识{cons}，vote={vote}，未在组合仓）"
+
+    # 组合持仓中
+    if port_flag == "卖出":
+        return "开盘卖出", f"{nd or '次日'} 开盘卖出（vote={vote}，共识{cons}，组合出场）"
+    open_a = _OPEN_FROM_CONSENSUS.get(cons, "开盘持有")
+    if open_a in ("开盘卖出",):
+        return "开盘卖出", f"{nd or '次日'} 开盘卖出（共识{cons}，vote={vote}）"
+    return "开盘持有", f"{nd or '次日'} 开盘持有（共识{cons}，vote={vote}，继续持仓）"
+
+
+def add_consensus_open_action_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """每日扫描 CSV：按单标的共识给出次日开盘操作。"""
+    if df.empty:
+        return df
+    out = df.copy()
+    out["next_open_action"] = out["consensus"].map(_OPEN_FROM_CONSENSUS).fillna("观望不动")
+    out["next_open_brief"] = out.apply(
+        lambda r: f"次日开盘：{_OPEN_FROM_CONSENSUS.get(str(r.get('consensus','')), '观望不动')}"
+        f"（共识{ r.get('consensus','')}，vote={r.get('vote_hold',0)}）",
+        axis=1,
+    )
+    return out
+
+
+def _reorder_etf_pnl_columns(df: pd.DataFrame) -> pd.DataFrame:
+    front = [
+        "date",
+        "next_date",
+        "code",
+        "name",
+        "next_open_action",
+        "next_open_brief",
+        "today_close_action",
+        "weight",
+        "etf_ret",
+        "etf_ret_pct",
+        "contrib_usd",
+        "cum_contrib_usd",
+    ]
+    rest = [c for c in df.columns if c not in front]
+    cols = [c for c in front if c in df.columns] + rest
+    return df[cols]
+
+
 def enrich_pnl_by_etf_next_action(
     all_etf: pd.DataFrame,
     detail: pd.DataFrame,
@@ -126,19 +216,19 @@ def enrich_pnl_by_etf_next_action(
     cal = pd.DatetimeIndex(sorted(out["date"].unique()))
     next_date_map = {cal[i]: cal[i + 1] for i in range(len(cal) - 1)}
 
+    open_actions: list[str] = []
+    open_briefs: list[str] = []
+    next_dates: list[object] = []
     consensus_list: list[str] = []
     vote_list: list[int] = []
     mom_list: list[float | None] = []
     risk_list: list[str] = []
-    eligible_list: list[str] = []
-    consensus_next: list[str] = []
-    portfolio_next: list[str] = []
-    next_dates: list[object] = []
 
     for _, row in out.iterrows():
         dt = row["date"]
         code = row["code"]
         held = float(row.get("weight", 0) or 0) > 1e-6
+        today_close = str(row.get("day_action", row.get("today_close_action", "持有")))
         key = (dt, code)
         sig = sig_idx.loc[key] if key in sig_idx.index else None
         if sig is not None and isinstance(sig, pd.DataFrame):
@@ -152,6 +242,7 @@ def enrich_pnl_by_etf_next_action(
             else None
         )
         risk_on = _market_risk_on(bench_row, rules)
+        nd = next_date_map.get(dt, pd.NaT)
 
         if sig is not None and not (isinstance(sig, pd.Series) and sig.empty):
             cons = str(sig.get("consensus", ""))
@@ -161,38 +252,39 @@ def enrich_pnl_by_etf_next_action(
         else:
             cons, vote, mom = "", 0, None
 
-        pn = _portfolio_next_action(sig, rules, risk_on, held)
-        cn = _consensus_next_action(cons)
+        port_flag = _portfolio_signal_flag(sig, rules, risk_on, held)
+        open_a, open_b = resolve_next_open_action(
+            held=held,
+            today_close_action=today_close,
+            port_flag=port_flag,
+            risk_on=risk_on,
+            consensus=cons,
+            vote=vote,
+            mom=mom,
+            next_date=nd,
+        )
 
+        open_actions.append(open_a)
+        open_briefs.append(open_b)
+        next_dates.append(nd)
         consensus_list.append(cons)
         vote_list.append(vote)
         mom_list.append(mom)
         risk_list.append("是" if risk_on else "否")
-        eligible_list.append("是" if pn == "可买入" else ("持仓中" if held else "否"))
-        consensus_next.append(cn)
-        portfolio_next.append(pn)
-        next_dates.append(next_date_map.get(dt, pd.NaT))
 
     out["next_date"] = next_dates
+    out["next_open_action"] = open_actions
+    out["next_open_brief"] = open_briefs
+    if "day_action" in out.columns:
+        out["today_close_action"] = out["day_action"]
+        out = out.drop(columns=["day_action"])
+    elif "today_close_action" not in out.columns:
+        out["today_close_action"] = "持有"
     out["signal_consensus"] = consensus_list
     out["vote_hold"] = vote_list
     out["mom120_pct"] = mom_list
     out["market_ma200_ok"] = risk_list
-    out["eligible_entry"] = eligible_list
-    out["consensus_next_action"] = consensus_next
-    out["portfolio_next_action"] = portfolio_next
-    # 主列：已持仓用组合卖出/持有；未持仓用共识或「可买入」
-    out["next_day_action"] = out.apply(
-        lambda r: r["portfolio_next_action"]
-        if float(r.get("weight", 0) or 0) > 1e-6
-        else (
-            r["consensus_next_action"]
-            if r["portfolio_next_action"] in ("观望", "过滤", "不可买")
-            else r["portfolio_next_action"]
-        ),
-        axis=1,
-    )
-    return out
+    return _reorder_etf_pnl_columns(out)
 
 
 def mark_etf_actions(all_etf: pd.DataFrame, trades: pd.DataFrame) -> pd.DataFrame:
@@ -209,6 +301,7 @@ def mark_etf_actions(all_etf: pd.DataFrame, trades: pd.DataFrame) -> pd.DataFram
         for _, tr in t.iterrows():
             m = (out["date"] == tr["date"]) & (out["code"] == tr["code"])
             out.loc[m, "day_action"] = str(tr["side"])
+    # 保留 day_action 供 enrich 读取，enrich 会改名为 today_close_action
     return out
 
 
