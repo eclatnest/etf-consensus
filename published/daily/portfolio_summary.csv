@@ -1,2 +1,2 @@
 ﻿total_return,annual_return,max_drawdown,sharpe,win_rate,final_equity,trade_days,max_positions,avg_held,max_held,portfolio_buys,portfolio_sells,round_trips,profit_factor,pnl_abs,rules,start,end,init_cash,cost_per_side
-126.6,17.01,-19.44,0.87,25.63,226596.66,1260,5,1.96,5,125,120,120,1.26,126596.66,fill_vote3_vote_lt2_n5_mom25.0_mkma200_rgno_buy,2021-03-12,2026-05-26,100000.0,0.0005
+126.43,16.98,-19.44,0.87,25.61,226426.2,1261,5,1.96,5,125,120,120,1.26,126426.2,fill_vote3_vote_lt2_n5_mom25.0_mkma200_rgno_buy,2021-03-12,2026-05-27,100000.0,0.0005
