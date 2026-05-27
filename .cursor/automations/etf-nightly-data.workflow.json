@@ -16,7 +16,11 @@
         "prompt": "请阅读 .cursor/automations/etf-nightly-data.prompt.md，在仓库根目录执行 python run_etf_nightly_update.py，完成后用中文汇报：行情截止日、latest/ 与 latest_portfolio/ 下关键 CSV 是否更新、组合期末净值与年化（从 portfolio_summary.csv）。不要改代码、不要开 PR。另请执行 python scripts/publish_daily_to_github.py --push，并在汇报中增加**第二天开盘操作**：读取 published/daily/NEXT_OPEN.md（或 next_open_actions.csv），列出开盘买入、开盘卖出、开盘持有的只数及代码名称。"
       }
     ],
-    "memory_enabled": false
+    "memory_enabled": false,
+    "git_config": {
+      "repo": "eclatnest/etf-consensus",
+      "branch": "master"
+    }
   },
   "notes": {
     "schedule": "cron 15 14 * * 1-5 = UTC 14:15 ≈ 北京 22:15（工作日）",

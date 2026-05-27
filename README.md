@@ -18,6 +18,7 @@ python run_etf_nightly_update.py
 |--------|------|------|
 | ETF每日买卖扫描 | 工作日 17:00 北京 | `etf-daily-scan.prompt.md` |
 | ETF每晚数据更新 | 工作日 22:15 北京 | `run_etf_nightly_update.py` |
+| ETF每日开盘操作 | 工作日 09:20 北京 | `etf-daily-open-execute.prompt.md` |
 
 ## 主要脚本
 
