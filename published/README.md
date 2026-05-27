@@ -19,9 +19,26 @@
 
 完整回测与 PnL 图在本地 `mx_data_output/`（体积大，不入库）。
 
+## 开盘自动执行
+
+工作日 **09:20（北京）** Automation `etf-daily-open-execute` 会 `git pull` 本目录并运行：
+
+```bash
+python scripts/execute_next_open_actions.py --pull
+```
+
+需配置环境变量 `MX_APIKEY`（妙想模拟交易）。
+
 ## 手动发布
 
 ```bash
 python run_etf_nightly_update.py
 python scripts/publish_daily_to_github.py --push
+```
+
+手动执行开盘操作：
+
+```bash
+python scripts/execute_next_open_actions.py --pull
+python scripts/execute_next_open_actions.py --pull --dry-run   # 仅看计划
 ```

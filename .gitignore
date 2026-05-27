@@ -10,6 +10,8 @@ venv/
 
 # 回测缓存与输出（Automation 运行时会重新生成）
 mx_data_output/
+!published/
+mx_data_output/etf_daily/executions/
 *.pkl
 
 # Cursor 本地（保留 .cursor/automations）

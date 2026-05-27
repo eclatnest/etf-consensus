@@ -1,0 +1,32 @@
+{
+  "name": "ETF每日开盘操作",
+  "description": "工作日开盘前读取 published/daily 次日操作清单，在妙想模拟账户按组合信号调仓",
+  "automationId": "d4e8a1c2-7f3b-4a9e-b6d2-1c0e5f8a9b3d",
+  "url": "https://cursor.com/automations/d4e8a1c2-7f3b-4a9e-b6d2-1c0e5f8a9b3d",
+  "workflow": {
+    "triggers": [
+      {
+        "cron": {
+          "cron": "20 1 * * 1-5"
+        }
+      }
+    ],
+    "prompts": [
+      {
+        "prompt": "请阅读 .cursor/automations/etf-daily-open-execute.prompt.md，在仓库根目录按流程执行：git pull 拉取最新 published/daily；核对 LAST_UPDATED.txt 与 NEXT_OPEN.md 的信号日/执行日；运行 python scripts/execute_next_open_actions.py --pull（非 A 股交易时段则加 --dry-run）。用中文汇报：操作清单摘要、实际卖出/买入结果、执行后持仓。不要改代码、不要开 PR。"
+      }
+    ],
+    "memory_enabled": false,
+    "git_config": {
+      "repo": "eclatnest/etf-consensus",
+      "branch": "master"
+    }
+  },
+  "notes": {
+    "schedule": "cron 20 1 * * 1-5 = UTC 01:20 ≈ 北京 09:20（工作日，开盘前）",
+    "depends_on": "ETF每晚数据更新（22:15 北京）生成的 published/daily/",
+    "script": "scripts/execute_next_open_actions.py",
+    "credentials": "MX_APIKEY（妙想模拟交易）",
+    "git_repo": "eclatnest/etf-consensus"
+  }
+}
