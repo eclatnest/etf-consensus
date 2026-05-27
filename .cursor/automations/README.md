@@ -15,8 +15,31 @@
 
 ## 环境变量（开盘操作）
 
-- `MX_APIKEY` — 妙想模拟交易（必填方可下单）
-- `MX_API_URL` — 可选，默认 `https://mkapi2.dfcfs.com/finskillshub`
+脚本通过 **`os.environ["MX_APIKEY"]`** 读取，必须是**操作系统环境变量**，不是 JavaScript 的 `process.env`。
+
+| 变量名 | 必填 | 说明 |
+|--------|------|------|
+| `MX_APIKEY` | 是（实盘下单） | 妙想 API Key，形如 `mkt_...` |
+| `MX_API_URL` | 否 | 默认 `https://mkapi2.dfcfs.com/finskillshub` |
+
+### Cursor 自动化 / Cloud Agent（推荐）
+
+1. 打开 [cursor.com/dashboard → Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agents)（或对应 Automation 的环境密钥）。
+2. **Name** 填：`MX_APIKEY`（仅变量名，不要写 `process.env.MX_APIKEY`）。
+3. **Value** 填：`mkt_xxxxxxxx`（完整密钥，无引号、无 `export`、无分号）。
+4. 若自动化绑定了专用 Environment，把密钥挂在**同一 Environment** 下（环境级密钥对该环境内所有 repo 生效）。
+5. 保存后**重新跑一次**自动化；新密钥不会对已在跑的 Agent 生效。
+
+### 本机调试
+
+```bash
+cp .env.example .env   # 编辑 .env 填入 MX_APIKEY
+set -a && source .env && set +a
+python3 scripts/execute_next_open_actions.py --pull --dry-run   # 先 dry-run
+python3 scripts/execute_next_open_actions.py --pull             # 交易时段再实盘
+```
+
+**错误示例**：`process.env.MX_APIKEY=mkt_...`（Node 语法，Python/Shell 读不到）。
 
 ## 从仓库导入
 

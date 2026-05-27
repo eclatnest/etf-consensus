@@ -7,6 +7,7 @@ __pycache__/
 venv/
 .env
 .env.*
+!.env.example
 
 # 回测缓存与输出（Automation 运行时会重新生成）
 mx_data_output/

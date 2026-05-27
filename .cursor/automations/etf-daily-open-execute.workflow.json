@@ -26,7 +26,7 @@
     "schedule": "cron 20 1 * * 1-5 = UTC 01:20 ≈ 北京 09:20（工作日，开盘前）",
     "depends_on": "ETF每晚数据更新（22:15 北京）生成的 published/daily/",
     "script": "scripts/execute_next_open_actions.py",
-    "credentials": "MX_APIKEY（妙想模拟交易）",
+    "credentials": "在 Cursor Dashboard → Cloud Agents → Secrets 添加 MX_APIKEY（变量名仅此，勿用 process.env. 前缀）",
     "git_repo": "eclatnest/etf-consensus"
   }
 }
