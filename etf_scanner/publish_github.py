@@ -298,10 +298,31 @@ def git_commit_and_push(published_dir: Path, signal_date: str) -> tuple[bool, st
     if c.returncode != 0:
         return False, c.stderr or c.stdout
 
-    p = run(["git", "push", "origin", "HEAD"])
+    sha_r = run(["git", "rev-parse", "HEAD"])
+    if sha_r.returncode != 0:
+        return False, sha_r.stderr or sha_r.stdout
+    sha = sha_r.stdout.strip()
+
+    # 用户从 GitHub master 阅读 NEXT_OPEN.md；Automation 可能在非 master 分支运行
+    cur = run(["git", "branch", "--show-current"]).stdout.strip()
+    fetch = run(["git", "fetch", "origin", "master"])
+    if fetch.returncode != 0:
+        return False, fetch.stderr or fetch.stdout
+    co = run(["git", "checkout", "master"])
+    if co.returncode != 0:
+        return False, co.stderr or co.stdout
+    run(["git", "pull", "--ff-only", "origin", "master"])
+    paths = [rel, "published/README.md"]
+    run(["git", "checkout", sha, "--", *paths])
+    st2 = run(["git", "status", "--porcelain", *paths])
+    if st2.stdout.strip():
+        run(["git", "commit", "-m", msg])
+    p = run(["git", "push", "origin", "master"])
+    if cur and cur != "master":
+        run(["git", "checkout", cur])
     if p.returncode != 0:
         return False, p.stderr or p.stdout
-    return True, "已 push 到 origin"
+    return True, "已 push 到 origin/master"
 
 
 def publish_daily(
