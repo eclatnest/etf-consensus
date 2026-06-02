@@ -35,6 +35,37 @@ def _zcode(c) -> str:
     return str(c).strip().zfill(6)
 
 
+def infer_sec_mkt(code: str) -> int:
+    """推断妙想 mockTrading 证券市场号：0=深交所，1=上交所。"""
+    c = _zcode(code)
+    if c.startswith(("5", "6", "9")):
+        return 1
+    if c.startswith(("0", "3")):
+        return 0
+    if c.startswith(("15", "16", "18")):
+        return 0
+    if c.startswith("8"):
+        return 2
+    raise ValueError(f"无法推断 {c} 的证券市场号")
+
+
+def infer_sec_type(code: str) -> int | None:
+    """证券类型：9=沪市基金，10=深市基金（见妙想 orders 字段说明）。"""
+    c = _zcode(code)
+    if c.startswith(("51", "56", "58", "50")):
+        return 9
+    if c.startswith(("15", "16", "18")):
+        return 10
+    return None
+
+
+def _price_decimals(code: str) -> int:
+    try:
+        return 3 if infer_sec_mkt(code) == 0 else 2
+    except ValueError:
+        return 2
+
+
 def _read_csv(path: Path) -> pd.DataFrame:
     if not path.is_file():
         return pd.DataFrame()
@@ -118,16 +149,54 @@ class MoniClient:
     def balance(self) -> dict:
         return self.post("/api/claw/mockTrading/balance", {"moneyUnit": 1})
 
-    def market_trade(self, side: str, code: str, quantity: int) -> dict:
-        return self.post(
-            "/api/claw/mockTrading/trade",
-            {
-                "type": side,
-                "stockCode": _zcode(code),
-                "quantity": quantity,
-                "useMarketPrice": True,
-            },
-        )
+    def market_trade(
+        self,
+        side: str,
+        code: str,
+        quantity: int,
+        *,
+        price: float | None = None,
+        use_market_price: bool = True,
+    ) -> dict:
+        c = _zcode(code)
+        body: dict = {
+            "type": side,
+            "stockCode": c,
+            "quantity": quantity,
+            "useMarketPrice": use_market_price,
+        }
+        try:
+            body["secMkt"] = infer_sec_mkt(c)
+        except ValueError:
+            pass
+        sec_type = infer_sec_type(c)
+        if sec_type is not None:
+            body["secType"] = sec_type
+        if not use_market_price and price is not None and price > 0:
+            dec = _price_decimals(c)
+            body["price"] = round(float(price), dec)
+        return self.post("/api/claw/mockTrading/trade", body)
+
+    def market_trade_with_fallback(
+        self, side: str, code: str, quantity: int, price_ref: float | None = None
+    ) -> dict:
+        """先市价；深交所基金若返回市场号错误则改限价重试。"""
+        res = self.market_trade(side, code, quantity, use_market_price=True)
+        msg = str(res.get("message") or "")
+        if res.get("code") in ("200", "0", 0) or "市场号" not in msg:
+            return res
+        if price_ref and price_ref > 0:
+            res2 = self.market_trade(
+                side,
+                code,
+                quantity,
+                price=price_ref,
+                use_market_price=False,
+            )
+            if res2.get("code") in ("200", "0", 0):
+                return res2
+            return res2
+        return res
 
 
 def fetch_etf_spot_prices(codes: list[str]) -> dict[str, float]:
@@ -297,7 +366,9 @@ def execute_trades(client: MoniClient, trades: dict) -> list[dict]:
     for s in trades["sells"]:
         if s["quantity"] < 100:
             continue
-        res = client.market_trade("sell", s["code"], s["quantity"])
+        res = client.market_trade_with_fallback(
+            "sell", s["code"], s["quantity"], price_ref=s.get("price_ref")
+        )
         log.append({"step": "sell", **s, "result": res})
         time.sleep(0.4)
 
@@ -306,7 +377,9 @@ def execute_trades(client: MoniClient, trades: dict) -> list[dict]:
     trades["avail_balance"] = float((bal.get("data") or {}).get("availBalance") or 0)
 
     for b in trades["buys"]:
-        res = client.market_trade("buy", b["code"], b["quantity"])
+        res = client.market_trade_with_fallback(
+            "buy", b["code"], b["quantity"], price_ref=b.get("price_ref")
+        )
         log.append({"step": "buy", **b, "result": res})
         time.sleep(0.4)
 
