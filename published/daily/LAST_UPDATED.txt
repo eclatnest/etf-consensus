@@ -1,4 +1,4 @@
-signal_date=2026-07-10
-generated_at=2026-07-10T12:46:28.923449
-equity=220555.84
+signal_date=2026-07-13
+generated_at=2026-07-13T12:47:05.588228
+equity=210366.50
 source_portfolio=latest_portfolio
