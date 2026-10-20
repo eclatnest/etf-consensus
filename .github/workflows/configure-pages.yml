@@ -1,0 +1,34 @@
+name: Configure GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [.github/workflows/configure-pages.yml]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  administration: write
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable Pages (legacy, master, /)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
+            gh api "repos/${GITHUB_REPOSITORY}/pages" -X PUT \
+              -f build_type=legacy \
+              -f 'source[branch]=master' \
+              -f 'source[path]=/'
+          else
+            gh api "repos/${GITHUB_REPOSITORY}/pages" -X POST \
+              -f build_type=legacy \
+              -f 'source[branch]=master' \
+              -f 'source[path]=/'
+          fi
