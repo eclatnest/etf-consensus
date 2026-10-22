@@ -247,8 +247,8 @@ const CONFIG = {
   WAVE_COUNT: 5,
   WAVE_BASE: 3,
   WAVE_GROW: 2,
-  WAVE_SPAWN_DELAY: 900,    // 同波内刷怪间隔 ms
-  MAX_ALIVE_ENEMIES: 4,     // 场上同时最多敌人数
+  WAVE_SPAWN_DELAY: 2200,   // 同波内刷怪间隔 ms（调慢）
+  MAX_ALIVE_ENEMIES: 3,     // 场上同时最多敌人数
 
   // AI
   AI_THINK_MS: 500,         // 随机变向间隔
@@ -802,7 +802,7 @@ function updateWaves(now) {
       waveSpawnAt = now + CONFIG.WAVE_SPAWN_DELAY;
       updateHud();
     } else {
-      waveSpawnAt = now + 400;
+      waveSpawnAt = now + 800;
     }
   }
 
